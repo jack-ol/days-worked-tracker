@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Tracker de Días</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ee;--surface:#fff;--surface2:#eeece8;
+  --text:#1a1a18;--text2:#6b6b65;--text3:#a8a89f;
+  --border:rgba(0,0,0,0.1);
+  --accent:#2d5a1b;--accent-l:#eaf3de;
+  --mid:#185fa5;--mid-l:#e6f1fb;
+  --warn:#854f0b;
+  --r:16px;--rs:10px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#181816;--surface:#222220;--surface2:#2a2a28;
+  --text:#f0ede8;--text2:#9a9a92;--text3:#5a5a54;
+  --border:rgba(255,255,255,0.08);
+  --accent:#97c459;--accent-l:#173404;
+  --mid:#378add;--mid-l:#042c53;
+  --warn:#ef9f27;
+}}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+.shell{max-width:480px;margin:0 auto;padding:0 0 6rem}
+
+.header{padding:3rem 1.25rem 1rem}
+.header h1{font-family:'DM Mono',monospace;font-size:13px;font-weight:400;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem}
+.pct{font-family:'DM Mono',monospace;font-size:72px;font-weight:500;line-height:1;color:var(--text);transition:color .4s}
+.pct.done{color:var(--accent)} .pct.mid{color:var(--mid)} .pct.low{color:var(--warn)}
+.sub-lbl{font-family:'DM Mono',monospace;font-size:13px;color:var(--text3);margin-top:.25rem;letter-spacing:.03em}
+
+.bar-wrap{padding:1rem 1.25rem 0}
+.bar-bg{background:var(--surface2);border-radius:99px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:var(--text3);transition:width .5s cubic-bezier(.4,0,.2,1),background .4s}
+.bar-fill.done{background:var(--accent)} .bar-fill.mid{background:var(--mid)}
+.bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:5px}
+.bar-label-start{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-label-end{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:1rem 1.25rem 0}
+.stat{background:var(--surface);border-radius:var(--rs);padding:.85rem .75rem;text-align:center;border:.5px solid var(--border)}
+.stat-num{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--text)}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.07em}
+
+.section{padding:1.5rem 1.25rem 0}
+.section-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:.6rem;font-family:'DM Mono',monospace}
+
+.add-card{background:var(--surface);border-radius:var(--r);border:.5px solid var(--border);overflow:hidden}
+.add-row{display:flex;align-items:center}
+.add-row label{font-size:13px;color:var(--text2);padding:.75rem 1rem;flex-shrink:0}
+.add-row input[type="date"]{flex:1;background:transparent;border:none;padding:.75rem .5rem;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);outline:none;-webkit-appearance:none;min-width:0}
+.add-confirm-btn{background:var(--accent-l);color:var(--accent);border:none;border-left:.5px solid var(--border);padding:.75rem 1rem;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;letter-spacing:.04em;transition:opacity .15s}
+.add-confirm-btn:active{opacity:.6}
+
+.inputs-card{background:var(--surface);border-radius:var(--r);border:.5px solid var(--border);padding:0 1.1rem}
+.input-field{display:flex;align-items:center;gap:10px;padding:.65rem 0;border-bottom:.5px solid var(--border)}
+.input-field:last-child{border-bottom:none}
+.input-field label{font-size:13px;color:var(--text2);flex:1}
+.input-field input[type="date"]{background:var(--surface2);border:none;border-radius:var(--rs);padding:.45rem .75rem;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);outline:none;-webkit-appearance:none}
+.input-field input[type="date"]:focus{box-shadow:0 0 0 2px var(--accent)}
+
+.months-card{background:var(--surface);border-radius:var(--r);border:.5px solid var(--border);overflow:hidden}
+.month-row{display:flex;align-items:center;gap:10px;padding:.7rem 1rem;border-bottom:.5px solid var(--border)}
+.month-row:last-child{border-bottom:none}
+.month-name{font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);width:52px;flex-shrink:0;text-transform:capitalize}
+.month-bar-bg{flex:1;background:var(--surface2);border-radius:99px;height:6px;overflow:hidden}
+.month-bar-fill{height:100%;border-radius:99px;background:var(--mid);transition:width .4s ease}
+.month-days{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);width:44px;text-align:right;flex-shrink:0}
+.list-empty{padding:1.1rem 1rem;font-size:13px;color:var(--text3);font-family:'DM Mono',monospace}
+
+.cal-card{background:var(--surface);border-radius:var(--r);border:.5px solid var(--border);overflow:hidden}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-bottom:.5px solid var(--border)}
+.cal-nav{background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.cal-nav:active{opacity:.5}
+.cal-month-lbl{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--text);letter-spacing:.04em;text-transform:capitalize}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:8px}
+.cal-dow{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-align:center;padding:4px 0;letter-spacing:.05em}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);cursor:default;position:relative}
+.cal-day.worked{background:var(--accent-l);color:var(--accent);font-weight:500}
+.cal-day.today{box-shadow:0 0 0 1.5px var(--mid)}
+.cal-day.other-month{color:var(--text3);opacity:.4}
+.cal-day.deadline{box-shadow:0 0 0 1.5px var(--warn);color:var(--warn)}
+.cal-day.period-start{box-shadow:0 0 0 1.5px var(--accent)}
+
+.notes-card{background:var(--surface);border-radius:var(--r);border:.5px solid var(--border);overflow:hidden}
+.note-add-row{display:flex;align-items:center;border-bottom:.5px solid var(--border)}
+.note-add-row input[type="text"]{flex:1;background:transparent;border:none;padding:.85rem 1rem;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none}
+.note-add-row input[type="text"]::placeholder{color:var(--text3)}
+.add-btn{background:none;border:none;border-left:.5px solid var(--border);padding:.85rem 1rem;font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap;letter-spacing:.05em}
+.add-btn:active{opacity:.6}
+.notes-list{list-style:none}
+.note-item{display:flex;align-items:flex-start;gap:8px;padding:.75rem 1rem;border-bottom:.5px solid var(--border);animation:fadeIn .2s ease}
+.note-item:last-child{border-bottom:none}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.note-text{flex:1;font-size:14px;color:var(--text);line-height:1.4}
+.note-meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.note-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);white-space:nowrap}
+.del-btn{background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:0;line-height:1}
+.del-btn:active{color:#e24b4a}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.confirm-sheet{background:var(--surface);border-radius:var(--r) var(--r) 0 0;padding:1.5rem 1.25rem 2.5rem;width:100%;max-width:480px;transform:translateY(30px);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.overlay.open .confirm-sheet{transform:translateY(0)}
+.confirm-title{font-family:'DM Mono',monospace;font-size:13px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
+.confirm-body{font-size:16px;color:var(--text);margin-bottom:1.5rem;line-height:1.5}
+.confirm-body strong{font-weight:500;color:var(--accent)}
+.confirm-actions{display:flex;gap:8px}
+.btn-cancel{flex:1;background:var(--surface2);color:var(--text2);border:none;border-radius:var(--rs);padding:.85rem;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer}
+.btn-ok{flex:1;background:var(--accent-l);color:var(--accent);border:.5px solid var(--accent);border-radius:var(--rs);padding:.85rem;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer}
+.btn-cancel:active,.btn-ok:active{opacity:.7}
+
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:.6rem 1.1rem;border-radius:99px;font-family:'DM Mono',monospace;font-size:13px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <h1>Tracker de días</h1>
+    <div class="pct" id="pct">—</div>
+    <div class="sub-lbl" id="sub-lbl">del período transcurrido</div>
+  </div>
+
+  <div class="bar-wrap">
+    <div class="bar-bg"><div class="bar-fill" id="bar" style="width:0%"></div></div>
+    <div class="bar-labels">
+      <span class="bar-label-start" id="bar-start">inicio</span>
+      <span class="bar-label-end" id="bar-end">fin</span>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="s-trab">0</div><div class="stat-lbl">días trabajados</div></div>
+    <div class="stat"><div class="stat-num" id="s-rest">—</div><div class="stat-lbl">días restantes</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Registrar turno</div>
+    <div class="add-card">
+      <div class="add-row">
+        <label>Fecha</label>
+        <input type="date" id="add-date" />
+        <button class="add-confirm-btn" onclick="requestAdd()">+ registrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Configurar período</div>
+    <div class="inputs-card">
+      <div class="input-field">
+        <label>Fecha de inicio</label>
+        <input type="date" id="start-date" />
+      </div>
+      <div class="input-field">
+        <label>Fecha de fin</label>
+        <input type="date" id="end-date" />
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Calendario</div>
+    <div class="cal-card">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="calPrev()">&#8249;</button>
+        <span class="cal-month-lbl" id="cal-lbl"></span>
+        <button class="cal-nav" onclick="calNext()">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Por mes</div>
+    <div class="months-card" id="months-card">
+      <div class="list-empty">Sin registros aún.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Notas</div>
+    <div class="notes-card">
+      <div class="note-add-row">
+        <input type="text" id="nota-input" placeholder="Escribe una nota..." />
+        <button class="add-btn" onclick="addNote()">+ añadir</button>
+      </div>
+      <ul class="notes-list" id="notes-list">
+        <li class="list-empty" id="notes-empty-li">Sin notas aún.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="confirm-sheet">
+    <div class="confirm-title">Confirmar registro</div>
+    <div class="confirm-body" id="confirm-body"></div>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="cancelAdd()">Cancelar</button>
+      <button class="btn-ok" onclick="confirmAdd()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY_NOTES='wt_notes3',KEY_LOG='wt_log3',KEY_START='wt_start3',KEY_END='wt_end3';
+const MONTHS_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MONTHS_S=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DOW=['lu','ma','mi','ju','vi','sá','do'];
+
+let notes=[],log=[];
+try{notes=JSON.parse(localStorage.getItem(KEY_NOTES)||'[]')}catch(e){}
+try{log=JSON.parse(localStorage.getItem(KEY_LOG)||'[]')}catch(e){}
+
+const startEl=document.getElementById('start-date');
+const endEl=document.getElementById('end-date');
+const todayISO=new Date().toISOString().slice(0,10);
+document.getElementById('add-date').value=todayISO;
+
+const savedStart=localStorage.getItem(KEY_START);
+const savedEnd=localStorage.getItem(KEY_END);
+if(savedStart){startEl.value=savedStart;}
+else{const d=new Date();d.setDate(1);startEl.value=d.toISOString().slice(0,10);}
+if(savedEnd){endEl.value=savedEnd;}
+else{const d=new Date();d.setMonth(d.getMonth()+3);endEl.value=d.toISOString().slice(0,10);}
+
+function daysBetween(a,b){
+  return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/(1000*60*60*24));
+}
+function fmtShort(iso){
+  const[,mo,dy]=iso.split('-');
+  return`${parseInt(dy)} ${MONTHS_S[parseInt(mo)-1]}`;
+}
+function workedCount(){return new Set(log.map(e=>e.date)).size;}
+
+function update(){
+  const s=startEl.value,e=endEl.value;
+  const trab=workedCount();
+  document.getElementById('s-trab').textContent=trab;
+
+  localStorage.setItem(KEY_START,s);
+  localStorage.setItem(KEY_END,e);
+
+  if(!s||!e||s>=e){
+    document.getElementById('pct').textContent='—';
+    document.getElementById('sub-lbl').textContent='configura el período';
+    document.getElementById('bar').style.width='0%';
+    document.getElementById('bar-start').textContent=s?fmtShort(s):'inicio';
+    document.getElementById('bar-end').textContent=e?fmtShort(e):'fin';
+    document.getElementById('s-rest').textContent='—';
+    const pctEl=document.getElementById('pct');
+    pctEl.className='pct';
+    document.getElementById('bar').className='bar-fill';
+    renderCalendar();
+    return;
+  }
+
+  const total=daysBetween(s,e);
+  const elapsed=Math.max(0,Math.min(total,daysBetween(s,todayISO)));
+  const remaining=Math.max(0,total-elapsed);
+  const pct=Math.round((elapsed/total)*100);
+
+  document.getElementById('pct').textContent=pct+'%';
+  document.getElementById('sub-lbl').textContent=`${elapsed} de ${total} días transcurridos`;
+  document.getElementById('bar').style.width=pct+'%';
+  document.getElementById('bar-start').textContent=fmtShort(s);
+  document.getElementById('bar-end').textContent=fmtShort(e);
+  document.getElementById('s-rest').textContent=remaining;
+
+  const pctEl=document.getElementById('pct');
+  const barEl=document.getElementById('bar');
+  pctEl.className='pct';barEl.className='bar-fill';
+  if(pct>=100){pctEl.classList.add('done');barEl.classList.add('done')}
+  else if(pct>=40){pctEl.classList.add('mid');barEl.classList.add('mid')}
+
+  renderCalendar();
+}
+
+let pending=null;
+function requestAdd(){
+  const d=document.getElementById('add-date').value;
+  if(!d){showToast('Selecciona una fecha');return;}
+  const worked=new Set(log.map(e=>e.date));
+  if(worked.has(d)){showToast('Este día ya está registrado');return;}
+  pending={d};
+  const[yr,mo,dy]=d.split('-');
+  const label=`${parseInt(dy)} de ${MONTHS_L[parseInt(mo)-1]} de ${yr}`;
+  document.getElementById('confirm-body').innerHTML=`¿Registrar turno del <strong>${label}</strong>?`;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeOverlay(e){if(e.target===document.getElementById('overlay'))cancelAdd();}
+function cancelAdd(){document.getElementById('overlay').classList.remove('open');pending=null;}
+function confirmAdd(){
+  if(!pending)return;
+  document.getElementById('overlay').classList.remove('open');
+  const{d}=pending;pending=null;
+  log.push({date:d});
+  localStorage.setItem(KEY_LOG,JSON.stringify(log));
+  update();renderMonths();
+  showToast('Turno registrado');
+}
+
+function renderMonths(){
+  const map={};
+  log.forEach(e=>{const ym=e.date.slice(0,7);map[ym]=(map[ym]||0)+1;});
+  const keys=Object.keys(map).sort();
+  const mc=document.getElementById('months-card');
+  if(keys.length===0){mc.innerHTML='<div class="list-empty">Sin registros aún.</div>';return;}
+  const maxD=Math.max(...Object.values(map));
+  mc.innerHTML=keys.map(ym=>{
+    const[yr,mo]=ym.split('-');
+    const label=MONTHS_S[parseInt(mo,10)-1]+' '+yr;
+    const d=map[ym];
+    const w=maxD>0?Math.round((d/maxD)*100):0;
+    return`<div class="month-row"><span class="month-name">${label}</span><div class="month-bar-bg"><div class="month-bar-fill" style="width:${w}%"></div></div><span class="month-days">${d}d</span></div>`;
+  }).join('');
+}
+
+let calYear=new Date().getFullYear();
+let calMonth=new Date().getMonth();
+function workedDays(){const s=new Set();log.forEach(e=>s.add(e.date));return s;}
+
+function renderCalendar(){
+  const worked=workedDays();
+  const sVal=startEl.value;
+  const eVal=endEl.value;
+  document.getElementById('cal-lbl').textContent=MONTHS_L[calMonth]+' '+calYear;
+  const grid=document.getElementById('cal-grid');
+  let html=DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  const first=new Date(calYear,calMonth,1);
+  let startDow=(first.getDay()+6)%7;
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const prevDays=new Date(calYear,calMonth,0).getDate();
+  for(let i=startDow-1;i>=0;i--){html+=`<div class="cal-day other-month">${prevDays-i}</div>`;}
+  for(let d=1;d<=daysInMonth;d++){
+    const iso=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cls='cal-day';
+    if(worked.has(iso))cls+=' worked';
+    if(iso===todayISO)cls+=' today';
+    if(iso===sVal)cls+=' period-start';
+    if(iso===eVal)cls+=' deadline';
+    html+=`<div class="${cls}">${d}</div>`;
+  }
+  const rem=(7-(startDow+daysInMonth)%7)%7;
+  for(let d=1;d<=rem;d++){html+=`<div class="cal-day other-month">${d}</div>`;}
+  grid.innerHTML=html;
+}
+
+function calPrev(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function calNext(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+function fmtDate(d){return d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function renderNotes(){
+  const list=document.getElementById('notes-list');
+  list.querySelectorAll('.note-item').forEach(el=>el.remove());
+  const empty=document.getElementById('notes-empty-li');
+  if(notes.length===0){empty.style.display='block';return;}
+  empty.style.display='none';
+  notes.forEach((n,i)=>{
+    const li=document.createElement('li');
+    li.className='note-item';
+    li.innerHTML=`<span class="note-text">${esc(n.text)}</span><div class="note-meta"><span class="note-date">${n.date}</span><button class="del-btn" onclick="deleteNote(${i})">✕</button></div>`;
+    list.appendChild(li);
+  });
+}
+
+function addNote(){
+  const inp=document.getElementById('nota-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  notes.unshift({text,date:fmtDate(new Date())});
+  localStorage.setItem(KEY_NOTES,JSON.stringify(notes));
+  inp.value='';renderNotes();
+}
+function deleteNote(i){
+  notes.splice(i,1);
+  localStorage.setItem(KEY_NOTES,JSON.stringify(notes));
+  renderNotes();
+}
+
+document.getElementById('nota-input').addEventListener('keydown',e=>{if(e.key==='Enter')addNote();});
+startEl.addEventListener('input',update);
+endEl.addEventListener('input',update);
+
+update();renderMonths();renderCalendar();renderNotes();
+</script>
+</body>
+</html>
